@@ -37,7 +37,8 @@ ENV NVM_DIR /usr/share/nvm
 RUN mkdir -p ${NVM_DIR} \
   && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
   && [ -s "${NVM_DIR}/nvm.sh" ] && \. "${NVM_DIR}/nvm.sh" \
-  && nvm install --lts --no-progress --default 14
+  && nvm install --lts --no-progress --default 14 \
+  && nvm cache clear
 
 # prefetch awscli2
 # https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html
@@ -189,10 +190,11 @@ FROM ${OS_DIST}-base AS frontend-dev
 ARG USERNAME=user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ENV NVM_DIR=/usr/share/nvm AWS_DIR=/usr/share/aws
+ARG AWS_DIR=/usr/share/aws
+ENV NVM_DIR=/usr/share/nvm
 COPY --from=node-builder --chown=${USER_UID}:${USER_UID} ${NVM_DIR} ${NVM_DIR}
-COPY --from=aws-builder --chown=${USER_UID}:${USER_UID} ${AWS_DIR} ${AWS_DIR}
-RUN update-ca-certificates \
+RUN --mount=from=aws-builder,source=${AWS_DIR},target=${AWS_DIR} \
+  update-ca-certificates \
   && addgroup --gid $USER_GID $USERNAME \
   && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
@@ -212,6 +214,7 @@ RUN update-ca-certificates \
   && echo Complete. \
   \
   && ${AWS_DIR}/install \
+  && echo Verifying AWS CLI install ... \
   && echo aws --version && aws --version \
   && echo Complete. \
   && true
