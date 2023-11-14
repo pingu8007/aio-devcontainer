@@ -30,6 +30,23 @@ RUN mkdir -p ${MAVEN_HOME} ${MAVEN_HOME}/ref \
   && tar -xzf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C ${MAVEN_HOME} --strip-components=1 \
   && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn
 
+# prefetch nvm & node
+FROM downloader AS node-builder
+ENV NVM_DIR /usr/share/nvm
+# COMPATIBILITY ISSUE! DON'T USE "--latest-npm"!
+RUN mkdir -p ${NVM_DIR} \
+  && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
+  && [ -s "${NVM_DIR}/nvm.sh" ] && \. "${NVM_DIR}/nvm.sh" \
+  && nvm install --lts --no-progress --default 14
+
+# prefetch awscli2
+# https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html
+FROM downloader AS aws-builder
+ENV AWS_DIR=/usr/share/aws
+RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.13.34.zip -o awscliv2.zip \
+  && unzip awscliv2.zip -d awscliv2 \
+  && mv awscliv2/aws ${AWS_DIR}
+
 # install common package
 # https://github.com/adoptium/containers/blob/main/17/jdk/ubuntu/focal/Dockerfile.releases.full
 FROM ubuntu:20.04 AS focal-base
@@ -168,8 +185,41 @@ RUN set -eux; \
   # https://openjdk.java.net/jeps/341
   java -Xshare:dump;
 
+FROM ${OS_DIST}-base AS frontend-dev
+ARG USERNAME=user
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+ENV NVM_DIR=/usr/share/nvm AWS_DIR=/usr/share/aws
+COPY --from=node-builder --chown=${USER_UID}:${USER_UID} ${NVM_DIR} ${NVM_DIR}
+COPY --from=aws-builder --chown=${USER_UID}:${USER_UID} ${AWS_DIR} ${AWS_DIR}
+RUN update-ca-certificates \
+  && addgroup --gid $USER_GID $USERNAME \
+  && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
+  && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+  && chmod 0440 /etc/sudoers.d/$USERNAME \
+  && mkdir -p /workspace /project /appdata/.m2 /appdata/.npm \
+      /appdata/.vscode-server/extensions \
+      /appdata/.vscode-server-insiders/extensions \
+  && ln -s -t /home/$USERNAME /appdata/.m2 /appdata/.npm \
+      /appdata/.vscode-server /appdata/.vscode-server-insiders \
+  && chown -R $USERNAME: /workspace /project /appdata \
+  \
+  && sudo -u $USERNAME NVM_DIR=${NVM_DIR} bash -l ${NVM_DIR}/install.sh && . ${NVM_DIR}/nvm.sh \
+  && echo Verifying NVM install ... \
+  && echo nvm --version && nvm --version \
+  && echo node --version && node --version \
+  && echo npm --version && npm --version \
+  && echo Complete. \
+  \
+  && ${AWS_DIR}/install \
+  && echo aws --version && aws --version \
+  && echo Complete. \
+  && true
+USER $USERNAME
+WORKDIR /workspace
+
 # install maven binary
-FROM jdk${JDK_VERSION}-base
+FROM jdk${JDK_VERSION}-base AS java-dev
 ARG USERNAME=user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
@@ -181,10 +231,10 @@ RUN update-ca-certificates \
   && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
   && chmod 0440 /etc/sudoers.d/$USERNAME \
-  && mkdir -p /workspace /project /appdata/.m2 \
+  && mkdir -p /workspace /project /appdata/.m2 /appdata/.npm \
       /appdata/.vscode-server/extensions \
       /appdata/.vscode-server-insiders/extensions \
-  && ln -s -t /home/$USERNAME /appdata/.m2 \
+  && ln -s -t /home/$USERNAME /appdata/.m2 /appdata/.npm \
       /appdata/.vscode-server /appdata/.vscode-server-insiders \
   && chown -R $USERNAME: /workspace /project /appdata \
   \
