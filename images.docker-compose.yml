@@ -1,7 +1,7 @@
 version: '3.9'
 services:
   jammy-node14:
-    image: devcontainer:jammy-fe
+    image: devcontainer/node:jammy-fe
     build:
       dockerfile: dev.dockerfile
       target: frontend-dev
@@ -10,7 +10,7 @@ services:
       args:
         - OS_DIST=jammy
   jammy-jdk17:
-    image: devcontainer:jammy-17
+    image: devcontainer/java:jammy-17
     build:
       dockerfile: dev.dockerfile
       target: java-dev
@@ -21,7 +21,7 @@ services:
         - JDK_VERSION=17
         - INSTALL_JDK_SRC=1
   jammy-jdk15:
-    image: devcontainer:jammy-15
+    image: devcontainer/java:jammy-15
     build:
       dockerfile: dev.dockerfile
       target: java-dev
@@ -32,7 +32,7 @@ services:
         - JDK_VERSION=15
         - INSTALL_JDK_SRC=1
   jammy-jdk8:
-    image: devcontainer:jammy-8
+    image: devcontainer/java:jammy-8
     build:
       dockerfile: dev.dockerfile
       target: java-dev

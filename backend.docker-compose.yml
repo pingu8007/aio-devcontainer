@@ -1,0 +1,25 @@
+version: '3.9'
+networks:
+  default:
+    name: dev-infra
+    external: true
+volumes:
+  maven-repo:
+  npm-repo:
+  vscode-server-extensions:
+  vscode-server-insiders-extensions:
+services:
+  workspace:
+    image: devcontainer/java:jammy-17
+    networks:
+      default:
+        aliases:
+          - backend
+    command: sleep infinity
+    restart: unless-stopped
+    volumes:
+      - ..:/workspace # Problematic on Windows, clone into WSL first
+      - maven-repo:/appdata/.m2
+      - npm-repo:/appdata/.npm
+      - vscode-server-extensions:/appdata/.vscode-server/extensions
+      - vscode-server-insiders-extensions:/appdata/.vscode-server-insiders/extensions
