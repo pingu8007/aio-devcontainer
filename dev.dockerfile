@@ -199,11 +199,16 @@ RUN --mount=from=aws-builder,source=${AWS_DIR},target=${AWS_DIR} \
   && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
   && chmod 0440 /etc/sudoers.d/$USERNAME \
-  && mkdir -p /workspace /project /appdata/.m2 /appdata/.npm \
-      /appdata/.vscode-server/extensions \
-      /appdata/.vscode-server-insiders/extensions \
-  && ln -s -t /home/$USERNAME /appdata/.m2 /appdata/.npm \
-      /appdata/.vscode-server /appdata/.vscode-server-insiders \
+  && mkdir -p /workspace /project \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server/extensions \
+    /appdata/.vscode-server-insiders/extensions \
+  && ln -s -t /home/$USERNAME \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server \
+    /appdata/.vscode-server-insiders \
   && chown -R $USERNAME: /workspace /project /appdata \
   \
   && sudo -u $USERNAME NVM_DIR=${NVM_DIR} bash -l ${NVM_DIR}/install.sh && . ${NVM_DIR}/nvm.sh \
@@ -217,6 +222,7 @@ RUN --mount=from=aws-builder,source=${AWS_DIR},target=${AWS_DIR} \
   && echo Verifying AWS CLI install ... \
   && echo aws --version && aws --version \
   && echo Complete. \
+  \
   && true
 USER $USERNAME
 WORKDIR /workspace
@@ -234,24 +240,33 @@ RUN update-ca-certificates \
   && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
   && chmod 0440 /etc/sudoers.d/$USERNAME \
-  && mkdir -p /workspace /project /appdata/.m2 /appdata/.npm \
-      /appdata/.vscode-server/extensions \
-      /appdata/.vscode-server-insiders/extensions \
-  && ln -s -t /home/$USERNAME /appdata/.m2 /appdata/.npm \
-      /appdata/.vscode-server /appdata/.vscode-server-insiders \
+  && mkdir -p /workspace /project \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server/extensions \
+    /appdata/.vscode-server-insiders/extensions \
+  && ln -s -t /home/$USERNAME \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server \
+    /appdata/.vscode-server-insiders \
   && chown -R $USERNAME: /workspace /project /appdata \
   \
-  && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn && echo "<settings xmlns=\"http://maven.apache.org/SETTINGS/1.0.0\"\n\
-  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\
-  xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd\">\n\
-  <localRepository>${MAVEN_HOME}/ref/repository</localRepository>\n\
-</settings>" > ${MAVEN_HOME}/ref/settings-docker.xml \
+  && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn \
   && echo Verifying MAVEN install ... \
   # && fileEncoding="$(echo 'System.out.println(System.getProperty("file.encoding"))' | jshell -s -)"; [ "$fileEncoding" = 'UTF-8' ]; rm -rf ~/.java \
   && echo javac -version && javac -version \
   && echo java -version && java -version \
   && echo mvn -version && mvn -version \
   && echo Complete. \
+  \
+  && sudo -u $USERNAME NVM_DIR=${NVM_DIR} bash -l ${NVM_DIR}/install.sh && . ${NVM_DIR}/nvm.sh \
+  && echo Verifying NVM install ... \
+  && echo nvm --version && nvm --version \
+  && echo node --version && node --version \
+  && echo npm --version && npm --version \
+  && echo Complete. \
+  \
   && true
 USER $USERNAME
 WORKDIR /workspace
