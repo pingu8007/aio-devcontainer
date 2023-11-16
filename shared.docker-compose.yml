@@ -1,5 +1,7 @@
 version: "3.9"
 
+name: dev_infra
+
 networks:
   default:
     name: dev-infra
@@ -43,6 +45,10 @@ services:
     restart: unless-stopped
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    profiles:
+      - debug
+    depends_on:
+      - kafka
     ports:
       - 9103:8080
     environment:
@@ -81,6 +87,10 @@ services:
   sonar:
     # image: sonarqube:lts-community
     image: sonarqube:lts-developer
+    profiles:
+      - extend
+    depends_on:
+      - sonardb
     ports:
       - 9000:9000
     restart: unless-stopped
@@ -108,6 +118,8 @@ services:
       - sonar-exts:/opt/sonarqube/extensions
   sonardb:
     image: postgres:15-alpine
+    profiles:
+      - extend
     networks:
       default:
         aliases:
@@ -123,6 +135,8 @@ services:
       - sonar-db:/var/lib/postgresql/data
   openldap:
     image: bitnami/openldap:2.6
+    profiles:
+      - extend
     ports:
       - 1389:1389
       # - 1636:1636 # LDAPS
