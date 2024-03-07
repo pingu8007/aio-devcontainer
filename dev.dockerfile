@@ -37,7 +37,7 @@ ENV NVM_DIR /usr/share/nvm
 RUN mkdir -p ${NVM_DIR} \
   && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
   && [ -s "${NVM_DIR}/nvm.sh" ] && \. "${NVM_DIR}/nvm.sh" \
-  && nvm install --lts --no-progress --default 14 \
+  && nvm install --lts --no-progress --default 20 \
   && nvm cache clear
 
 # prefetch awscli2
