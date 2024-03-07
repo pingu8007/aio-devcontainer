@@ -84,6 +84,27 @@ services:
       - HTTP_AUTHORIZATION
       - ALLOW_PLANTUML_INCLUDE
 
+  registry-explorer:
+    image: joxit/docker-registry-ui:latest
+    profiles:
+      - debug
+    ports:
+      - 9031:80
+    restart: unless-stopped
+    environment:
+      - REGISTRY_URL
+      - NGINX_PROXY_PASS_URL
+      - REGISTRY_TITLE
+      - DELETE_IMAGES
+      - SHOW_CONTENT_DIGEST
+      - CATALOG_ELEMENTS_LIMIT
+      - SINGLE_REGISTRY
+      - SHOW_CATALOG_NB_TAGS
+      - CATALOG_MIN_BRANCHES
+      - CATALOG_MAX_BRANCHES
+      - TAGLIST_PAGE_SIZE
+      - REGISTRY_SECURED
+
   sonar:
     # image: sonarqube:lts-community
     image: sonarqube:lts-developer
