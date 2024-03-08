@@ -11,8 +11,18 @@ volumes:
 services:
   workspace:
     image: devcontainer/node:jammy-fe
+    environment:
+      TZ: "Europe/Moscow"
     command: sleep infinity
     restart: unless-stopped
+    extra_hosts:
+      - devops_new.tianyitechs.com:47.75.161.8
+      - vgp_disconf.tianyitechs.com:47.75.161.8
+      - wiki.tianyitechs.com:47.75.161.8
+      - maven.unicornfintech.com:18.138.190.67
+      - dev.disconf.com:54.179.222.144
+      - gitlab.fintechs-inc.com:47.106.10.244
+      - jenkins.vantagefx.com:8.210.226.72
     volumes:
       - ..:/workspace # Problematic on Windows, clone into WSL first
       - maven-repo:/appdata/.m2

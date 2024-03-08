@@ -6,10 +6,13 @@ networks:
 services:
   www:
     image: nginx:stable-alpine
+    environment:
+      TZ: "Europe/Moscow"
     ports:
       - 80:80
       - 8088:80
     restart: unless-stopped
     volumes:
-      - ./www:/usr/share/nginx/html:ro
+      - ./${BRAND:?}-client-portal/dist:/usr/share/nginx/html/cp:ro
+      - ./${BRAND:?}-ib-portal/dist:/usr/share/nginx/html/ib:ro
       - ./www.conf:/etc/nginx/conf.d/default.conf:ro

@@ -1,0 +1,29 @@
+version: "3.9"
+
+name: legacy_infra
+
+networks:
+  default:
+    name: dev-infra
+    # docker network create dev-infra
+    external: true
+
+services:
+  # All-in-one container
+  zrk:
+    platform: linux/amd64
+    # image: 47.74.113.109:5000/local-env-disconf:latest # oversea
+    # image: 192.168.66.120:5000/local-env-disconf:latest # AU
+    image: docker-register.crm-alpha.com:5000/local-env-disconf:latest
+    environment:
+      TZ: "Europe/Moscow"
+      CONTAINER_IP: zookeeper.local.crm-alpha.com # zookeeper hostname
+    networks:
+      default:
+        aliases:
+          - disconf.local.crm-alpha.com
+    ports:
+      - 8050:8081
+    restart: unless-stopped
+    cap_add:
+      - CAP_SYS_ADMIN # to start systemd in container

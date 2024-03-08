@@ -24,7 +24,7 @@ services:
     networks:
       default:
         aliases:
-          - zookeeper.local
+          - zookeeper.local.crm-alpha.com
     ports:
       - 2181:2181
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
     networks:
       default:
         aliases:
-          - kafka.local
+          - kafka.local.crm-alpha.com
     ports:
       - 9092:9092
     restart: unless-stopped
@@ -67,7 +67,7 @@ services:
     networks:
       default:
         aliases:
-          - redis.local
+          - redis.local.crm-alpha.com
     ports:
       - 6379:6379
     restart: unless-stopped
@@ -144,7 +144,7 @@ services:
     networks:
       default:
         aliases:
-          - sonarqube.local
+          - sonarqube-db01.crm-alpha.com
     ports:
       - 5432:5432
     restart: unless-stopped
