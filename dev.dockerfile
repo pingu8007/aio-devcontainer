@@ -166,24 +166,28 @@ RUN apt-get update \
   && mkdir -p ${ASDF_DIR} \
   && git clone https://github.com/asdf-vm/asdf.git ${ASDF_DIR} --branch v0.14.0 \
   && . ${ASDF_DIR}/asdf.sh \
-  && asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git \
-  && asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git \
-  && asdf install nodejs latest:20.11.1 && asdf install ruby latest:3.3.0
+  && touch ${ASDF_DIR}/.tool-versions.default \
+  && ln -s ${ASDF_DIR}/.tool-versions.default .tool-versions \
+  && echo java temurin-17.0.8+7 >> .tool-versions \
+  && echo maven 3.9.6 >> .tool-versions \
+  && echo nodejs 20.11.1 >> .tool-versions \
+  && echo ruby 3.3.0 >> .tool-versions \
+  && asdf plugin add java \
+  && asdf plugin add maven \
+  && asdf plugin add nodejs \
+  && asdf plugin add ruby \
+  && asdf install
 
 # install java and maven binary
-FROM ${OS_DIST}-base AS java-dev-alt
+FROM jammy-base AS dev-aio
 ARG USERNAME=user
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ARG JDK_VERSION=17
-# ARG INSTALL_JDK_SRC=1
-ENV ASDF_DIR=/usr/share/asdf ASDF_DATA_DIR=/usr/share/asdf \
-  JAVA_HOME=/opt/java/openjdk MAVEN_HOME=/usr/share/maven \
-  PATH="/opt/java/openjdk/bin:$PATH"
-COPY --link --from=java-dist ${JAVA_HOME} ${JAVA_HOME}
-COPY --link --from=mvn-dist ${MAVEN_HOME} ${MAVEN_HOME}
+ARG AWS_DIR=/usr/share/aws
+ENV ASDF_DIR=/usr/share/asdf ASDF_DATA_DIR=/usr/share/asdf
 COPY --link --from=asdf-builder --chown=${USER_UID}:${USER_UID} ${ASDF_DIR} ${ASDF_DIR}
-RUN update-ca-certificates \
+RUN --mount=from=aws-installer,source=${AWS_DIR},target=${AWS_DIR} \
+  update-ca-certificates \
   && addgroup --gid $USER_GID $USERNAME \
   && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
@@ -200,30 +204,43 @@ RUN update-ca-certificates \
     /appdata/.vscode-server-insiders \
   && chown -R $USERNAME: /workspace /project /appdata \
   \
-  # && ([ "${INSTALL_JDK_SRC}" != 1 ] && rm -f ${JAVA_HOME}/src.zip ${JAVA_HOME}/lib/src.zip || true) \
-  # https://github.com/docker-library/openjdk/issues/331#issuecomment-498834472
-  && (find "$JAVA_HOME/lib" -name '*.so' -exec dirname '{}' ';' | sort -u | tee /etc/ld.so.conf.d/docker-openjdk.conf) \
-  && ldconfig \
-  # https://github.com/docker-library/openjdk/issues/212#issuecomment-420979840
-  # https://openjdk.java.net/jeps/341
-  && java -Xshare:dump \
-  && ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn \
-  && echo Verifying JAVA \& MAVEN install ... \
-  # && fileEncoding="$(echo 'System.out.println(System.getProperty("file.encoding"))' | jshell -s -)"; [ "$fileEncoding" = 'UTF-8' ]; rm -rf ~/.java \
+  && echo . ${ASDF_DIR}/asdf.sh >> /home/$USERNAME/.bashrc \
+  && echo . ${ASDF_DIR}/completions/asdf.bash >> /home/$USERNAME/.bashrc \
+  && echo . ${ASDF_DIR}/plugins/java/set-java-home.bash >> /home/$USERNAME/.bashrc \
+  && ln -s ${ASDF_DIR}/.tool-versions.default /home/$USERNAME/.tool-versions \
+  && echo Verifying ASDF install ... \
+  && echo asdf info \& current && sudo -u $USERNAME ASDF_DIR=${ASDF_DIR} ASDF_DATA_DIR=${ASDF_DATA_DIR} \
+    bash -c ". ${ASDF_DIR}/asdf.sh && asdf info && asdf current" \
+  && cd /home/$USERNAME && . ${ASDF_DIR}/asdf.sh \
+  && echo asdf info && asdf info \
+  && echo asdf current && asdf current \
+  && echo Complete. \
+  \
+  # # https://github.com/docker-library/openjdk/issues/331#issuecomment-498834472
+  # && (find "$JAVA_HOME/lib" -name '*.so' -exec dirname '{}' ';' | sort -u | tee /etc/ld.so.conf.d/docker-openjdk.conf) \
+  # && ldconfig \
+  # # https://github.com/docker-library/openjdk/issues/212#issuecomment-420979840
+  # # https://openjdk.java.net/jeps/341
+  # && java -Xshare:dump \
+  && echo Verifying Java install ... \
   && echo javac -version && javac -version \
   && echo java -version && java -version \
   && echo mvn -version && mvn -version \
   && echo Complete. \
   \
-  && echo . ${ASDF_DIR}/asdf.sh >> /home/$USERNAME/.bashrc \
-  && echo . ${ASDF_DIR}/completions/asdf.bash >> /home/$USERNAME/.bashrc \
-  && touch /home/$USERNAME/.tool-versions \
-  && echo nodejs 20.11.1 >> /home/$USERNAME/.tool-versions \
-  && echo ruby 3.3.0 >> /home/$USERNAME/.tool-versions \
-  && chown $USERNAME: /home/$USERNAME/.tool-versions \
-  && echo Verifying ASDF install ... \
-  && echo asdf info \& current && sudo -u $USERNAME ASDF_DIR=${ASDF_DIR} ASDF_DATA_DIR=${ASDF_DATA_DIR} \
-    bash -c ". ${ASDF_DIR}/asdf.sh && asdf info && asdf current" \
+  && echo Verifying NodeJS install ... \
+  && echo node --version && node --version \
+  && echo npm --version && npm --version \
+  && echo Complete. \
+  \
+  && echo Verifying Ruby install ... \
+  && echo ruby --version && ruby --version \
+  && echo bundle --version && bundle --version \
+  && echo Complete. \
+  \
+  && ${AWS_DIR}/install \
+  && echo Verifying AWS CLI install ... \
+  && echo aws --version && aws --version \
   && echo Complete. \
   \
   ;

@@ -4,11 +4,9 @@ services:
     image: devcontainer/aio:latest
     build:
       dockerfile: dev.dockerfile
-      target: java-dev-alt
+      target: dev-aio
       platforms:
         - "linux/amd64"
-      args:
-        - OS_DIST=jammy
   jammy-node14:
     image: devcontainer/node:jammy-fe
     build:
