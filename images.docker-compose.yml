@@ -1,5 +1,14 @@
 version: '3.9'
 services:
+  jammy-aio:
+    image: devcontainer/aio:latest
+    build:
+      dockerfile: dev.dockerfile
+      target: java-dev-alt
+      platforms:
+        - "linux/amd64"
+      args:
+        - OS_DIST=jammy
   jammy-node14:
     image: devcontainer/node:jammy-fe
     build:
