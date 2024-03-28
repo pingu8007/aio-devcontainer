@@ -157,6 +157,96 @@ RUN set -eux; \
   mkdir -p "$JAVA_HOME"; \
   tar -xzf /tmp/openjdk.tar.gz -C "$JAVA_HOME" --strip-components=1 --no-same-owner
 
+FROM jammy-base AS asdf-builder
+ENV ASDF_DIR=/usr/share/asdf ASDF_DATA_DIR=/usr/share/asdf
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    autoconf patch build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev \
+    rustc libgmp-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev uuid-dev \
+  && mkdir -p ${ASDF_DIR} \
+  && git clone https://github.com/asdf-vm/asdf.git ${ASDF_DIR} --branch v0.14.0 \
+  && . ${ASDF_DIR}/asdf.sh \
+  && touch ${ASDF_DIR}/.tool-versions.default \
+  && ln -s ${ASDF_DIR}/.tool-versions.default .tool-versions \
+  && echo java temurin-17.0.8+7 >> .tool-versions \
+  && echo maven 3.9.6 >> .tool-versions \
+  && echo nodejs 20.11.1 >> .tool-versions \
+  && echo ruby 3.3.0 >> .tool-versions \
+  && asdf plugin add java \
+  && asdf plugin add maven \
+  && asdf plugin add nodejs \
+  && asdf plugin add ruby \
+  && asdf install
+
+# install java and maven binary
+FROM jammy-base AS dev-aio
+ARG USERNAME=user
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+ARG AWS_DIR=/usr/share/aws
+ENV ASDF_DIR=/usr/share/asdf ASDF_DATA_DIR=/usr/share/asdf
+COPY --link --from=asdf-builder --chown=${USER_UID}:${USER_UID} ${ASDF_DIR} ${ASDF_DIR}
+RUN --mount=from=aws-installer,source=${AWS_DIR},target=${AWS_DIR} \
+  update-ca-certificates \
+  && addgroup --gid $USER_GID $USERNAME \
+  && adduser --uid $USER_UID --gid $USER_GID $USERNAME \
+  && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+  && chmod 0440 /etc/sudoers.d/$USERNAME \
+  && mkdir -p /workspace /project \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server/extensions \
+    /appdata/.vscode-server-insiders/extensions \
+  && ln -s -t /home/$USERNAME \
+    /appdata/.m2 \
+    /appdata/.npm \
+    /appdata/.vscode-server \
+    /appdata/.vscode-server-insiders \
+  && chown -R $USERNAME: /workspace /project /appdata \
+  \
+  && echo . ${ASDF_DIR}/asdf.sh >> /home/$USERNAME/.bashrc \
+  && echo . ${ASDF_DIR}/completions/asdf.bash >> /home/$USERNAME/.bashrc \
+  && echo . ${ASDF_DIR}/plugins/java/set-java-home.bash >> /home/$USERNAME/.bashrc \
+  && ln -s ${ASDF_DIR}/.tool-versions.default /home/$USERNAME/.tool-versions \
+  && echo Verifying ASDF install ... \
+  && echo asdf info \& current && sudo -u $USERNAME ASDF_DIR=${ASDF_DIR} ASDF_DATA_DIR=${ASDF_DATA_DIR} \
+    bash -c ". ${ASDF_DIR}/asdf.sh && asdf info && asdf current" \
+  && cd /home/$USERNAME && . ${ASDF_DIR}/asdf.sh \
+  && echo asdf info && asdf info \
+  && echo asdf current && asdf current \
+  && echo Complete. \
+  \
+  # # https://github.com/docker-library/openjdk/issues/331#issuecomment-498834472
+  # && (find "$JAVA_HOME/lib" -name '*.so' -exec dirname '{}' ';' | sort -u | tee /etc/ld.so.conf.d/docker-openjdk.conf) \
+  # && ldconfig \
+  # # https://github.com/docker-library/openjdk/issues/212#issuecomment-420979840
+  # # https://openjdk.java.net/jeps/341
+  # && java -Xshare:dump \
+  && echo Verifying Java install ... \
+  && echo javac -version && javac -version \
+  && echo java -version && java -version \
+  && echo mvn -version && mvn -version \
+  && echo Complete. \
+  \
+  && echo Verifying NodeJS install ... \
+  && echo node --version && node --version \
+  && echo npm --version && npm --version \
+  && echo Complete. \
+  \
+  && echo Verifying Ruby install ... \
+  && echo ruby --version && ruby --version \
+  && echo bundle --version && bundle --version \
+  && echo Complete. \
+  \
+  && ${AWS_DIR}/install \
+  && echo Verifying AWS CLI install ... \
+  && echo aws --version && aws --version \
+  && echo Complete. \
+  \
+  ;
+USER $USERNAME
+WORKDIR /workspace
+
 FROM ${OS_DIST}-base AS frontend-dev
 ARG USERNAME=user
 ARG USER_UID=1000
